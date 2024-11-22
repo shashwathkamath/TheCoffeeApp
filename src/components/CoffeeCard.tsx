@@ -4,19 +4,19 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 
 interface CoffeeCardProps {
     name: string;
-    rating: number;
     distance: string;
+    rating: number;
     imageUrl: string;
 }
 
-const CoffeeCard: React.FC<CoffeeCardProps> = ({ name, rating, distance, imageUrl }) => {
+const CoffeeCard: React.FC<CoffeeCardProps> = ({ name, distance, rating, imageUrl }) => {
     return (
         <View style={styles.card}>
             <Image source={{ uri: imageUrl }} style={styles.image} />
-            <View style={styles.info}>
+            <View style={styles.details}>
                 <Text style={styles.name}>{name}</Text>
-                <Text style={styles.details}>
-                    ⭐ {rating} | {distance} km
+                <Text style={styles.info}>
+                    ⭐ {rating} • {distance} km
                 </Text>
             </View>
         </View>
@@ -26,9 +26,10 @@ const CoffeeCard: React.FC<CoffeeCardProps> = ({ name, rating, distance, imageUr
 const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        margin: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        marginHorizontal: 10,
+        marginBottom: 10,
         overflow: 'hidden',
         elevation: 2,
     },
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
     },
-    info: {
+    details: {
         flex: 1,
         padding: 10,
         justifyContent: 'center',
@@ -44,8 +45,9 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: '#6C4E25',
     },
-    details: {
+    info: {
         fontSize: 14,
         color: '#757575',
     },

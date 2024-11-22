@@ -2,29 +2,52 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import CoffeeCard from '../components/CoffeeCard';
-import SearchBar from '../components/SearchBar';
+import CoffeeMap from '../components/CoffeeMap';
+import TitleHeader from '../components/TitleHeader';
 
 const coffeeShops = [
-    { id: '1', name: 'Cafe Latte', rating: 4.5, distance: '0.5', imageUrl: 'https://via.placeholder.com/80' },
-    { id: '2', name: 'Java Express', rating: 4.7, distance: '1.2', imageUrl: 'https://via.placeholder.com/80' },
-    // Add more shops...
+    {
+        id: '1',
+        name: 'Cafe Latte',
+        distance: '0.5',
+        rating: 4.5,
+        imageUrl: 'https://via.placeholder.com/80',
+    },
+    {
+        id: '2',
+        name: 'Java Express',
+        distance: '1.2',
+        rating: 4.7,
+        imageUrl: 'https://via.placeholder.com/80',
+    },
+    {
+        id: '3',
+        name: 'Brewed Bliss',
+        distance: '0.8',
+        rating: 4.6,
+        imageUrl: 'https://via.placeholder.com/80',
+    },
 ];
 
 const HomeScreen = () => {
     return (
         <View style={styles.container}>
-            <SearchBar />
+            <TitleHeader />
+            <CoffeeMap />
             <FlatList
                 data={coffeeShops}
+                keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <CoffeeCard
                         name={item.name}
-                        rating={item.rating}
                         distance={item.distance}
+                        rating={item.rating}
                         imageUrl={item.imageUrl}
                     />
                 )}
-                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.listContainer}
             />
         </View>
     );
@@ -33,7 +56,10 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#F8EDE3', // Cream background
+    },
+    listContainer: {
+        paddingHorizontal: 10,
     },
 });
 
