@@ -1,86 +1,139 @@
+import Geolocation from '@react-native-community/geolocation';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Dimensions, PermissionsAndroid, Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
-import { fetchCoffeeShops } from '../utils/api'; // Import the fetch function
+import { fetchCoffeeShops } from '../utils/api'; // Replace with your API function
 
 interface CoffeeShop {
     id: string;
     name: string;
     latitude: number;
     longitude: number;
+    distance?: string;
+    rating?: number;
+    imageUrl?: string;
 }
 
-const CoffeeMap = () => {
-    const [coffeeShops, setCoffeeShops] = useState<CoffeeShop[]>([]);
-    const [region, setRegion] = useState<Region>({
-        latitude: 37.78825,
-        longitude: -122.4324,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-    });
-    const [isLoading, setIsLoading] = useState(false); // Loading state for fetching data
+interface CoffeeMapProps {
+    onUpdateCoffeeShops?: (shops: CoffeeShop[]) => void; // Optional function to pass updated coffee shops
+}
 
-    // Fetch coffee shops whenever the region changes
-    const fetchAndSetCoffeeShops = async (newRegion: Region) => {
-        setIsLoading(true); // Show loader while fetching data
+const CoffeeMap: React.FC<CoffeeMapProps> = ({ onUpdateCoffeeShops = () => { } }) => {
+    const [userRegion, setUserRegion] = useState<Region | null>(null); // User's location
+    const [mapRegion, setMapRegion] = useState<Region | null>(null); // Map's visible region
+    const [coffeeShops, setCoffeeShops] = useState<CoffeeShop[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const getCurrentLocation = async () => {
+        setIsLoading(true);
         try {
-            const radius = newRegion.latitudeDelta * 111000; // Convert latDelta to meters
-            const shops = await fetchCoffeeShops(newRegion.latitude, newRegion.longitude, radius);
-            setCoffeeShops(shops); // Update coffee shop pins
+            if (Platform.OS === 'android') {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+                );
+
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    console.error('Location permission denied');
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            Geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const initialRegion: Region = {
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.05,
+                        longitudeDelta: 0.05,
+                    };
+
+                    setUserRegion(initialRegion); // Save user's location
+                    setMapRegion(initialRegion); // Center the map at the user's location
+                    fetchShopsForRegion(initialRegion);
+                    setIsLoading(false);
+                },
+                (error) => {
+                    console.error('Error fetching location:', error);
+                    setIsLoading(false);
+                },
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+            );
         } catch (error) {
-            console.error('Error fetching coffee shops:', error);
-        } finally {
-            setIsLoading(false); // Hide loader once fetching is complete
+            console.error('Error requesting location permission:', error);
+            setIsLoading(false);
         }
     };
 
-    // Initial fetch on mount
+    const fetchShopsForRegion = async (region: Region) => {
+        setIsLoading(true);
+        try {
+            const radius = region.latitudeDelta * 111000; // Convert latitudeDelta to meters
+            const shops = await fetchCoffeeShops(region.latitude, region.longitude, radius);
+            setCoffeeShops(shops); // Update local coffee shop state
+            onUpdateCoffeeShops(shops); // Call the parent function
+        } catch (error) {
+            console.error('Error fetching coffee shops:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        fetchAndSetCoffeeShops(region);
-    }, [region]);
+        getCurrentLocation();
+    }, []);
+
+    if (isLoading || !mapRegion) {
+        return (
+            <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#6C4E25" />
+            </View>
+        );
+    }
 
     return (
-        <View style={{ flex: 1 }}>
-            {isLoading && (
-                <ActivityIndicator
-                    style={styles.loader}
-                    size="large"
-                    color="#6C4E25" // Coffee-themed loader color
+        <MapView
+            style={styles.map}
+            region={mapRegion} // Keep the map centered at the current region
+            onRegionChangeComplete={(newRegion) => setMapRegion(newRegion)}
+        >
+            {userRegion && (
+                <Marker
+                    coordinate={{
+                        latitude: userRegion.latitude,
+                        longitude: userRegion.longitude,
+                    }}
+                    title="You are here"
+                    pinColor="blue"
                 />
             )}
-            <MapView
-                style={styles.map}
-                initialRegion={region}
-                onRegionChangeComplete={(newRegion) => {
-                    setRegion(newRegion); // Update the region
-                    fetchAndSetCoffeeShops(newRegion); // Fetch data for the new region
-                }}
-            >
-                {coffeeShops.map((shop) => (
-                    <Marker
-                        key={shop.id}
-                        coordinate={{ latitude: shop.latitude, longitude: shop.longitude }}
-                        title={shop.name}
-                        pinColor="#6C4E25" // Coffee-themed pin color
-                    />
-                ))}
-            </MapView>
-        </View>
+
+            {coffeeShops.map((shop) => (
+                <Marker
+                    key={shop.id}
+                    coordinate={{
+                        latitude: shop.latitude,
+                        longitude: shop.longitude,
+                    }}
+                    title={shop.name}
+                    pinColor="#6C4E25"
+                />
+            ))}
+        </MapView>
     );
 };
 
 const styles = StyleSheet.create({
     map: {
-        width: '100%',
-        height: '100%',
+        width: Dimensions.get('window').width * 0.9, // 90% of screen width
+        height: Dimensions.get('window').height * 0.6, // 60% of screen height
+        borderRadius: 10, // Rounded corners for a polished look
     },
-    loader: {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        marginTop: -20,
-        marginLeft: -20,
-        zIndex: 10, // Ensure the loader appears above the map
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

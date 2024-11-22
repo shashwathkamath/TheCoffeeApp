@@ -40,6 +40,10 @@
 		<array>
 			<string>arm64</string>
 		</array>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>We need your location to show nearby coffee shops.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>We need your location to show nearby coffee shops.</string>
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
