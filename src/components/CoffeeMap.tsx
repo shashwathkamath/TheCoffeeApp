@@ -1,8 +1,7 @@
-// components/CoffeeMap.tsx
-import axios from 'axios';
-import React, { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
+import { fetchCoffeeShops } from '../utils/api'; // Import the fetch function
 
 interface CoffeeShop {
     id: string;
@@ -19,60 +18,69 @@ const CoffeeMap = () => {
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
     });
+    const [isLoading, setIsLoading] = useState(false); // Loading state for fetching data
 
-    // Fetch coffee shops based on the map's region
-    const fetchCoffeeShops = async (newRegion: Region) => {
+    // Fetch coffee shops whenever the region changes
+    const fetchAndSetCoffeeShops = async (newRegion: Region) => {
+        setIsLoading(true); // Show loader while fetching data
         try {
-            // Replace with your API endpoint or Google Places API
-            const response = await axios.get('https://api.example.com/coffee-shops', {
-                params: {
-                    lat: newRegion.latitude,
-                    lng: newRegion.longitude,
-                    radius: newRegion.latitudeDelta * 111000, // Approximation in meters
-                },
-            });
-
-            const shops = response.data.map((shop: any) => ({
-                id: shop.id,
-                name: shop.name,
-                latitude: shop.geometry.location.lat,
-                longitude: shop.geometry.location.lng,
-            }));
-
-            setCoffeeShops(shops);
+            const radius = newRegion.latitudeDelta * 111000; // Convert latDelta to meters
+            const shops = await fetchCoffeeShops(newRegion.latitude, newRegion.longitude, radius);
+            setCoffeeShops(shops); // Update coffee shop pins
         } catch (error) {
             console.error('Error fetching coffee shops:', error);
+        } finally {
+            setIsLoading(false); // Hide loader once fetching is complete
         }
     };
 
-    // Handle map region change
-    const onRegionChangeComplete = (newRegion: Region) => {
-        setRegion(newRegion);
-        fetchCoffeeShops(newRegion);
-    };
+    // Initial fetch on mount
+    useEffect(() => {
+        fetchAndSetCoffeeShops(region);
+    }, [region]);
 
     return (
-        <MapView
-            style={styles.map}
-            initialRegion={region}
-            onRegionChangeComplete={onRegionChangeComplete} // Detect region changes
-        >
-            {coffeeShops.map((shop) => (
-                <Marker
-                    key={shop.id}
-                    coordinate={{ latitude: shop.latitude, longitude: shop.longitude }}
-                    title={shop.name}
-                    pinColor="#6C4E25" // Dark Brown for coffee shops
+        <View style={{ flex: 1 }}>
+            {isLoading && (
+                <ActivityIndicator
+                    style={styles.loader}
+                    size="large"
+                    color="#6C4E25" // Coffee-themed loader color
                 />
-            ))}
-        </MapView>
+            )}
+            <MapView
+                style={styles.map}
+                initialRegion={region}
+                onRegionChangeComplete={(newRegion) => {
+                    setRegion(newRegion); // Update the region
+                    fetchAndSetCoffeeShops(newRegion); // Fetch data for the new region
+                }}
+            >
+                {coffeeShops.map((shop) => (
+                    <Marker
+                        key={shop.id}
+                        coordinate={{ latitude: shop.latitude, longitude: shop.longitude }}
+                        title={shop.name}
+                        pinColor="#6C4E25" // Coffee-themed pin color
+                    />
+                ))}
+            </MapView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     map: {
         width: '100%',
-        height: '50%', // Adjust map height as needed
+        height: '100%',
+    },
+    loader: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        marginTop: -20,
+        marginLeft: -20,
+        zIndex: 10, // Ensure the loader appears above the map
     },
 });
 
